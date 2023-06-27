@@ -1,7 +1,7 @@
 <script setup>
 
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
-import {listBlog} from "@/api/blog";
+import {addBlog, listBlog, updateBlog} from "@/api/blog";
 
 const {proxy} = getCurrentInstance();
 const {blog_type, yon} = proxy.useDict("blog_type", "yon");
@@ -87,9 +87,17 @@ function submitForm(){
   proxy.$refs["blogRef"].validate(valid => {
     if (valid){
       if (form.value.id != undefined){
-
+        updateBlog(form.value).then(resp => {
+          proxy.$modal.msgSuccess("修改成功");
+          open.value = false;
+          getList();
+        })
       } else {
-
+        addBlog(form.value).then(resp => {
+          proxy.$modal.msgSuccess("新增成功");
+          open.value = false;
+          getList();
+        })
       }
     }
   })
@@ -254,13 +262,13 @@ function handleSelectionChange(){
 
     <el-table v-loading="loading" :data="blogList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="标题" prop="title" :show-overflow-tooltip="true" width="120" />
-      <el-table-column label="博客类型" prop="blogType" width="150" />
-      <el-table-column label="作者" prop="author" width="150" />
-      <el-table-column label="原始链接" prop="originalLink" width="150" />
-      <el-table-column label="是否置顶" prop="isTop" width="150" />
-      <el-table-column label="是否原创" prop="isOriginal" width="150" />
-      <el-table-column label="是否私密" prop="isPrivate" width="150" />
+      <el-table-column label="标题"  align="center" prop="title" :show-overflow-tooltip="true" width="120" />
+      <el-table-column label="博客类型"  align="center" prop="blogType" width="100" />
+      <el-table-column label="作者"  align="center" prop="author" width="100" />
+      <el-table-column label="原始链接"  align="center" prop="originalLink" width="150" />
+      <el-table-column label="是否置顶"  align="center" prop="isTop" width="80" />
+      <el-table-column label="是否原创"  align="center" prop="isOriginal" width="80" />
+      <el-table-column label="是否私密" align="center"  prop="isPrivate" width="80" />
       <el-table-column label="创建时间" align="center" prop="createTime">
         <template #default="scope">
           <span>{{ parseTime(scope.row.createTime) }}</span>
@@ -332,35 +340,33 @@ function handleSelectionChange(){
                 :value="dict.value"/>
           </el-select>
         </el-form-item>
-        <el-form-item label="是否原创" style="width: 240px">
+        <el-form-item label="是否原创" prop="isOriginal" style="width: 240px">
           <el-radio-group v-model="form.isOriginal">
             <el-radio
                 v-for="dict in yon"
                 :key="dict.value"
-                :label="dict.label"
-                :value="dict.value">
+                :label="dict.value">
               {{ dict.label }}
             </el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="是否私密" style="width: 240px">
+        <el-form-item label="是否私密" prop="isPrivate" style="width: 240px">
           <el-radio-group v-model="form.isPrivate">
             <el-radio
                 v-for="dict in yon"
                 :key="dict.value"
-                :label="dict.label"
-                :value="dict.value">
+                :label="dict.value"
+                >
               {{ dict.label }}
             </el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="是否置顶" style="width: 240px">
+        <el-form-item label="是否置顶" prop="isTop" style="width: 240px">
           <el-radio-group v-model="form.isTop">
             <el-radio
                 v-for="dict in yon"
                 :key="dict.value"
-                :label="dict.label"
-                :value="dict.value">
+                :label="dict.value">
               {{ dict.label }}
             </el-radio>
           </el-radio-group>
@@ -384,7 +390,3 @@ function handleSelectionChange(){
 
   </div>
 </template>
-
-<style scoped lang="scss">
-
-</style>
