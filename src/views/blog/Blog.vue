@@ -1,7 +1,7 @@
 <script setup>
 
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
-import {addBlog, listBlog, updateBlog} from "@/api/blog";
+import {addBlog, listBlog, updateBlog, delBlog} from "@/api/blog";
 
 const {proxy} = getCurrentInstance();
 const {blog_type, yon} = proxy.useDict("blog_type", "yon");
@@ -111,8 +111,14 @@ function handleUpdate(){
   
 }
 
-function handleDelete(){
-  
+function handleDelete(row){
+  const blogId = row.id;
+  proxy.$modal.confirm("是否删除标题为《" + row.title + "》的博客？").then(function() {
+    return delBlog(blogId);
+  }).then(() => {
+    getList();
+    proxy.$modal.msgSuccess("删除成功");
+  }).catch(() => {})
 }
 
 function handleExport(){
@@ -122,6 +128,8 @@ function handleExport(){
 function handleSelectionChange(){
 
 }
+
+getList();
 </script>
 
 <template>
@@ -154,8 +162,7 @@ function handleSelectionChange(){
           <el-option
               v-for="dict in blog_type"
               :key="dict.value"
-              :label="dict.label"
-              :value="dict.value"/>
+              :label="dict.value"/>
         </el-select>
       </el-form-item>
       <el-form-item label="创建时间" style="width: 308px">
@@ -184,8 +191,7 @@ function handleSelectionChange(){
           <el-radio
               v-for="dict in yon"
               :key="dict.value"
-              :label="dict.label"
-              :value="dict.value">
+              :label="dict.value">
             {{ dict.label }}
           </el-radio>
         </el-radio-group>
@@ -195,8 +201,7 @@ function handleSelectionChange(){
           <el-radio
               v-for="dict in yon"
               :key="dict.value"
-              :label="dict.label"
-              :value="dict.value">
+              :label="dict.value">
             {{ dict.label }}
           </el-radio>
         </el-radio-group>
@@ -206,8 +211,7 @@ function handleSelectionChange(){
           <el-radio
               v-for="dict in yon"
               :key="dict.value"
-              :label="dict.label"
-              :value="dict.value">
+              :label="dict.value">
             {{ dict.label }}
           </el-radio>
         </el-radio-group>
@@ -266,9 +270,21 @@ function handleSelectionChange(){
       <el-table-column label="博客类型"  align="center" prop="blogType" width="100" />
       <el-table-column label="作者"  align="center" prop="author" width="100" />
       <el-table-column label="原始链接"  align="center" prop="originalLink" width="150" />
-      <el-table-column label="是否置顶"  align="center" prop="isTop" width="80" />
-      <el-table-column label="是否原创"  align="center" prop="isOriginal" width="80" />
-      <el-table-column label="是否私密" align="center"  prop="isPrivate" width="80" />
+      <el-table-column label="是否置顶"  align="center" prop="isTop" width="80" >
+        <template #default="scope">
+            <dict-tag :options="yon" :value="scope.row.isTop" />
+        </template>
+      </el-table-column>
+      <el-table-column label="是否原创"  align="center" prop="isOriginal" width="80" >
+        <template #default="scope">
+            <dict-tag :options="yon" :value="scope.row.isOriginal" />
+        </template>
+      </el-table-column>
+      <el-table-column label="是否私密" align="center"  prop="isPrivate" width="80" >
+        <template #default="scope">
+            <dict-tag :options="yon" :value="scope.row.isPrivate" />
+        </template>
+      </el-table-column>
       <el-table-column label="创建时间" align="center" prop="createTime">
         <template #default="scope">
           <span>{{ parseTime(scope.row.createTime) }}</span>
@@ -282,7 +298,7 @@ function handleSelectionChange(){
                 type="text"
                 icon="Edit"
                 @click="handleUpdate(scope.row)"
-                v-hasPermi="['system:role:edit']"
+                v-hasPermi="['blog:blog::edit']"
             ></el-button>
           </el-tooltip>
           <el-tooltip content="删除" placement="top" v-if="scope.row.roleId !== 1">
@@ -290,7 +306,7 @@ function handleSelectionChange(){
                 type="text"
                 icon="Delete"
                 @click="handleDelete(scope.row)"
-                v-hasPermi="['system:role:remove']"
+                v-hasPermi="['blog:blog:remove']"
             ></el-button>
           </el-tooltip>
           <el-tooltip content="置顶" placement="top" v-if="scope.row.roleId !== 1">
@@ -298,7 +314,7 @@ function handleSelectionChange(){
                 type="text"
                 icon="CircleCheck"
                 @click="handleTop(scope.row)"
-                v-hasPermi="['system:role:edit']"
+                v-hasPermi="['blog:blog::edit']"
             ></el-button>
           </el-tooltip>
           <el-tooltip content="查看详情" placement="top" v-if="scope.row.roleId !== 1">
@@ -306,7 +322,7 @@ function handleSelectionChange(){
                 type="text"
                 icon="User"
                 @click="handleBlogInfo(scope.row)"
-                v-hasPermi="['system:role:edit']"
+                v-hasPermi="['blog:blog:edit']"
             ></el-button>
           </el-tooltip>
         </template>
