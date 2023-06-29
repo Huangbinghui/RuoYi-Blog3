@@ -1,7 +1,7 @@
 <script setup>
 
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
-import {addBlog, listBlog, updateBlog, delBlog} from "@/api/blog";
+import {addBlog, listBlog, updateBlog, delBlog, getBlog} from "@/api/blog";
 
 const {proxy} = getCurrentInstance();
 const {blog_type, yon} = proxy.useDict("blog_type", "yon");
@@ -9,6 +9,7 @@ const {blog_type, yon} = proxy.useDict("blog_type", "yon");
 const dateRange = ref([]);
 const blogList = ref([]);
 const total = ref(0);
+const curSelection = ref();
 
 const showSearch = ref(true);
 const loading = ref(false);
@@ -29,9 +30,9 @@ const data = reactive({
     isDeleted: undefined
   },
   rules: {
-    roleName: [{required: true, message: "角色名称不能为空", trigger: "blur"}],
-    roleKey: [{required: true, message: "权限字符不能为空", trigger: "blur"}],
-    roleSort: [{required: true, message: "角色顺序不能为空", trigger: "blur"}]
+    title: [{required: true, message: "标题不能为空", trigger: "blur"}],
+    blogType: [{required: true, message: "博客类型不能为空", trigger: "blur"}],
+    isOriginal: [{required: true, message: "是否原创不能为空", trigger: "blur"}],
   },
 })
 
@@ -64,7 +65,9 @@ function resetQuery(){
 function handleAdd(){
   reset();
   open.value = true;
-  title.value = "添加博客"
+  title.value = "添加博客";
+  form.value.isPrivate="0";
+  form.value.isTop="0";
 }
 
 function reset(){
@@ -104,15 +107,22 @@ function submitForm(){
 }
 
 function cancel(){
-
+  open.value = false;
+  reset();
 }
 
-function handleUpdate(){
-  
+function handleUpdate(row){
+  reset();
+  const blogId = row.id || curSelection.id;
+  getBlog(blogId).then(resp => {
+  form.value = resp.data;
+  open.value = true;
+  title.value = "修改博客";
+  })
 }
 
 function handleDelete(row){
-  const blogId = row.id;
+  const blogId = row.id || curSelection.id;
   proxy.$modal.confirm("是否删除标题为《" + row.title + "》的博客？").then(function() {
     return delBlog(blogId);
   }).then(() => {
@@ -125,8 +135,8 @@ function handleExport(){
   
 }
 
-function handleSelectionChange(){
-
+function handleCurrentChange(row){
+  curSelection.value = row;
 }
 
 getList();
@@ -162,7 +172,8 @@ getList();
           <el-option
               v-for="dict in blog_type"
               :key="dict.value"
-              :label="dict.value"/>
+              :label="dict.label"
+              :value="dict.value"/>
         </el-select>
       </el-form-item>
       <el-form-item label="创建时间" style="width: 308px">
@@ -175,7 +186,7 @@ getList();
             end-placeholder="结束日期"
         ></el-date-picker>
       </el-form-item>
-      <el-form-item label="是否原创" style="width: 240px">
+      <el-form-item label="是否原创" prop="isOriginal" style="width: 240px">
         <el-radio-group v-model="queryParams.isOriginal">
           <el-radio
               v-for="dict in yon"
@@ -186,7 +197,7 @@ getList();
           </el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item label="是否私密" style="width: 240px">
+      <el-form-item label="是否私密" prop="isPrivate" style="width: 240px">
         <el-radio-group v-model="queryParams.isPrivate">
           <el-radio
               v-for="dict in yon"
@@ -196,7 +207,7 @@ getList();
           </el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item label="是否置顶" style="width: 240px">
+      <el-form-item label="是否置顶" prop="isTop" style="width: 240px">
         <el-radio-group v-model="queryParams.isTop">
           <el-radio
               v-for="dict in yon"
@@ -206,7 +217,7 @@ getList();
           </el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item label="是否删除" style="width: 240px">
+      <el-form-item label="是否删除" prop="isDeleted" style="width: 240px">
         <el-radio-group v-model="queryParams.isDeleted">
           <el-radio
               v-for="dict in yon"
@@ -238,7 +249,7 @@ getList();
             plain
             icon="Edit"
             :disabled="single"
-            @click="handleUpdate"
+            @click="handleUpdate(curSelection)"
             v-hasPermi="['blog:blog:edit']"
         >修改</el-button>
       </el-col>
@@ -248,7 +259,7 @@ getList();
             plain
             icon="Delete"
             :disabled="multiple"
-            @click="handleDelete"
+            @click="handleDelete(curSelection)"
             v-hasPermi="['blog:blog:remove']"
         >删除</el-button>
       </el-col>
@@ -264,10 +275,15 @@ getList();
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
-    <el-table v-loading="loading" :data="blogList" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="55" align="center" />
+    <el-table v-loading="loading" :data="blogList" highlight-current-row 
+    @current-change="handleCurrentChange">
+      <el-table-column type="index" width="55" align="center" />
       <el-table-column label="标题"  align="center" prop="title" :show-overflow-tooltip="true" width="120" />
-      <el-table-column label="博客类型"  align="center" prop="blogType" width="100" />
+      <el-table-column label="博客类型"  align="center" prop="blogType" width="100" >
+        <template #default="scope">
+          <dict-tag :options="blog_type" :value="scope.row.blogType" />
+        </template>
+      </el-table-column>
       <el-table-column label="作者"  align="center" prop="author" width="100" />
       <el-table-column label="原始链接"  align="center" prop="originalLink" width="150" />
       <el-table-column label="是否置顶"  align="center" prop="isTop" width="80" >
