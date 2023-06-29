@@ -378,7 +378,7 @@ function reset() {
     status: "0"
   };
   proxy.resetForm("jobRef");
-}
+}  
 /** 搜索按钮操作 */
 function handleQuery() {
   queryParams.value.pageNum = 1;
